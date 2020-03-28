@@ -3,13 +3,14 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Link
 } from 'react-router-dom';
 import { ApolloProvider } from 'react-apollo';
 import { InMemoryCache } from 'apollo-cache-inmemory';
 import { HttpLink } from 'apollo-link-http';
 import ApolloClient from 'apollo-client';
 import NotesPage from './screens/notes/NotesPage';
+import HomePage from './screens/home/HomePage';
+import './App.css';
 
 const cache = new InMemoryCache();
 const link = new HttpLink({
@@ -24,26 +25,15 @@ const client = new ApolloClient({
 const App = () =>
   <ApolloProvider client={client}>
     <Router>
-      <nav>
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/notes">Notes</Link>
-          </li>
-        </ul>
-      </nav>
       <Switch>
         <Route path="/notes">
           <NotesPage />
         </Route>
         <Route path="/">
-        Home page
+          <HomePage />
         </Route>
       </Switch>
     </Router>
   </ApolloProvider>;
-
 
 export default App;

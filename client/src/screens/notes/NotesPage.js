@@ -1,7 +1,47 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from 'react-apollo';
+import styled, { css } from 'styled-components';
 import { CreateNoteMutation, DeleteNoteMutation, UpdateNoteMutation }  from './graphql/mutations';
 import NotesQuery from './graphql/queries';
+import Page from '../../components/Layout/Page';
+import Note from '../../components/Notes/Note';
+import { Button, Input, message } from 'antd';
+
+const pageSectionStyle = css`
+  box-shadow: 0px 0px 5px 2px #0d2538;
+  background: white;
+`;
+
+const CreateNoteSection = styled.div`
+  border-radius: 15px 15px 0 0;
+  margin-bottom: 25px;
+  padding: 20px;
+  display: flex;
+  ${pageSectionStyle}
+`;
+
+const NotesListSection = styled.div`
+  border-radius: 0 0 15px 15px;
+  overflow-y: scroll;
+  padding: 20px 0;
+  height: 500px;
+  width: 600px;
+  ${pageSectionStyle}
+`;
+
+const ListElement = styled.div`
+  border-bottom: solid 1px rgba(191,185,191,0.36);
+  padding:  15px 0px 15px 10px;
+  margin: 0 20px;
+  
+  &:hover {
+    cursor: pointer;
+  }
+    
+  &:last-child {
+    border-bottom: none;
+  }
+`;
 
 const NotesPage = () => {
   // Graphql query
@@ -9,97 +49,59 @@ const NotesPage = () => {
 
   // State hooks
   const [newNote, setNewNote] = useState('');
-  const [noteContentBeingUpdated, setNoteContentBeingUpdated] = useState('');
-  const [noteIdBeingUpdated, setNoteIdBeingUpdated] = useState('');
 
   // Graphql mutations
   const [createNoteMutation] = useMutation(CreateNoteMutation);
   const [deleteNoteMutation] = useMutation(DeleteNoteMutation);
   const [updateNoteMutation] = useMutation(UpdateNoteMutation);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error :(</p>;
-
-  const { notes } = data;
+  if (error) {
+    message.error('Error :(');
+    return null;
+  }
 
   // Handlers
   const handleCreateNote = () => {
     if (newNote) {
       createNoteMutation({ variables: { content: newNote }, refetchQueries: ['NotesQuery'] }).then(() => {
-        // eslint-disable-next-line no-console
-        console.log('Response received from server.');
+        message.success('Note created');
       }).catch(createNoteMutationError => {
-        // eslint-disable-next-line no-console
-        console.log(createNoteMutationError);
+        message.error(createNoteMutationError);
       });
       setNewNote('');
     }
   };
-  const handleUpdateNote = (_id, content, isBeingUpdated) => () => {
-    if (isBeingUpdated) {
-      updateNoteMutation({ variables: { _id, content: noteContentBeingUpdated } }).then(() => {
-        // eslint-disable-next-line no-console
-        console.log('Response received from server.');
-      }).catch(updateNoteMutationError => {
-        // eslint-disable-next-line no-console
-        console.log(updateNoteMutationError);
-      });
-      setNoteIdBeingUpdated('');
-      setNoteContentBeingUpdated('');
-    } else {
-      setNoteIdBeingUpdated(_id);
-      setNoteContentBeingUpdated(content);
-    }
-  };
-  const handleNoteBeingUpdated = (e) => setNoteContentBeingUpdated(e.target.value);
-  const handleDeleteNote = (_id) => () => {
-    deleteNoteMutation({ variables: { _id }, refetchQueries: ['NotesQuery'] }).then(() => {
-      // eslint-disable-next-line no-console
-      console.log('Response received from server.');
-    }).catch(deleteNoteMutationError => {
-      // eslint-disable-next-line no-console
-      console.log(deleteNoteMutationError);
-    });
-  };
-  const handleOnChangeNote = e => setNewNote(e.target.value);
+
+  const handleOnChangeNewNote = e => setNewNote(e.target.value);
 
   return (
-    <div>
-      <header>Notes</header>
-      <ul>
-        {notes.map(note => {
+    <Page currentPage="notes" loading={loading}>
+      <CreateNoteSection>
+        <Input
+          value={newNote}
+          onChange={handleOnChangeNewNote}
+          placeholder="Add a note here"
+          style={{  height: '50px' }}
+        />
+        <Button type="primary" onClick={handleCreateNote} style={{  height: '50px' }}>Create note</Button>
+      </CreateNoteSection>
+      <NotesListSection>
+        {data?.notes.map(note => {
           const { content, _id } = note;
-          const isBeingUpdated = noteIdBeingUpdated === _id;
 
           return (
-            <div key={_id}>
-              {isBeingUpdated ? (
-                <li>
-                  <input
-                    value={noteContentBeingUpdated}
-                    onChange={handleNoteBeingUpdated}
-                  />
-                </li>
-              ) : (
-                <li>{content}</li>
-              )}
-              <div style={{ display: 'flex' }}>
-                <button type="button" onClick={handleUpdateNote(_id, content, isBeingUpdated)}>update</button>
-                <button type="button" onClick={handleDeleteNote(_id)}>delete</button>
-              </div>
-            </div>
+            <ListElement key={_id}>
+              <Note
+                id={_id}
+                note={content}
+                onUpdateNote={updateNoteMutation}
+                onDeleteNote={deleteNoteMutation}
+              />
+            </ListElement>
           );
         })}
-      </ul>
-      <footer>
-        <input
-          value={newNote}
-          onChange={handleOnChangeNote}
-          placeholder='Add a note here'
-        />
-        <button type="button" onClick={handleCreateNote}>create note</button>
-      </footer>
-    </div>
+      </NotesListSection>
+    </Page>
   );
 };
 
